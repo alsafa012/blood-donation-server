@@ -29,6 +29,10 @@ async function run() {
     // await client.connect();
 
     const userCollection = client.db("bloodDonation").collection("users");
+    const reviewCollection = client.db("bloodDonation").collection("reviews");
+    const fmcTokenCollection = client
+      .db("bloodDonation")
+      .collection("fmc-tokens");
     const availableDonorCollection = client
       .db("bloodDonation")
       .collection("available-donor");
@@ -155,6 +159,24 @@ async function run() {
       const result = await userCollection.deleteMany({});
       res.send(result);
     });
+    app.get("/fmc-tokens", async (req, res) => {
+      result = await fmcTokenCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.post("/fmc-tokens", async (req, res) => {
+      const token = req.body;
+      // console.log("body", token);
+      const query = { email: token.fmcToken };
+      const existingFMCToken = await fmcTokenCollection.findOne(query);
+      if (existingFMCToken) {
+        return res.send({
+          message: "token already exists on database for this user.",
+        });
+      }
+      const result = await fmcTokenCollection.insertOne(token);
+      res.send(result);
+    });
 
     // app.get("/available-donor", async (req, res) => {
     //     const result = await userCollection.find({ user_activeStatus: "active" }).toArray();
@@ -240,10 +262,8 @@ async function run() {
       res.send(result);
     });
 
-
-
-
     // create allComments api->>
+
     app.get("/allComments", async (req, res) => {
       const result = await userCommentCollection.find().toArray();
       res.send(result);
@@ -258,6 +278,80 @@ async function run() {
     });
     app.delete("/allComments", async (req, res) => {
       const result = await userCommentCollection.deleteMany({});
+      res.send(result);
+    });
+    app;
+
+    // allReviews api->>
+
+    app.get("/reviews", async (req, res) => {
+      const result = await reviewCollection.find().toArray();
+      res.send(result);
+    });
+    app.post("/reviews", async (req, res) => {
+      const postInfo = req.body;
+      // console.log("postInfo", postInfo);
+      const newPost = {
+        ...postInfo,
+        postCreatedDate: new Date(),
+        update_history: [],
+      };
+      const result = await reviewCollection.insertOne(newPost);
+      res.send(result);
+    });
+    app.patch("/reviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const updatedReviewInfo = req.body;
+      console.log("updatedReviewInfo", updatedReviewInfo);
+
+      // Fetch the existing review
+      const existingReview = await reviewCollection.findOne(filter);
+
+      const updateReview = {
+        $set: {
+          // product_quantity: updatedReviewInfo.afterOrderQuantity,
+          // product_totalSell: updatedReviewInfo.finalSell,
+          rating: updatedReviewInfo.rating,
+          review_content: updatedReviewInfo.review_content,
+          update_status: updatedReviewInfo.update_status,
+        },
+        $push: {
+          // Add the previous review to the history array
+          update_history: {
+            pre_rating: existingReview.rating,
+            updated_rating: updatedReviewInfo.rating,
+            pre_review_content: existingReview.review_content,
+            updated_review_content: updatedReviewInfo.review_content,
+            updated_review_time: new Date().toLocaleTimeString(), // Update time
+            updated_review_date: new Date().toLocaleDateString(), // Update date
+          },
+        },
+      };
+      console.log("updateReview", updateReview);
+      const result = await reviewCollection.updateOne(filter, updateReview);
+      console.log("result", result);
+      res.send(result);
+    });
+
+    app.delete("/reviews/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await reviewCollection.deleteOne(query);
+      res.send(result);
+    });
+    app.delete("/reviews", async (req, res) => {
+      const result = await reviewCollection.deleteMany({});
+      res.send(result);
+    });
+
+    app.get("/single-post-details/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      // console.log("/single-post-details/:id", id);
+      // console.log("/single-post-details/:id", query);
+      const result = await userPostCollection.findOne(query);
+      console.log(result);
       res.send(result);
     });
 
