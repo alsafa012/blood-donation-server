@@ -30,6 +30,9 @@ async function run() {
 
     const userCollection = client.db("bloodDonation").collection("users");
     const reviewCollection = client.db("bloodDonation").collection("reviews");
+    const reportDonorCollection = client
+      .db("bloodDonation")
+      .collection("reportDonor");
     const fmcTokenCollection = client
       .db("bloodDonation")
       .collection("fmc-tokens");
@@ -344,7 +347,7 @@ async function run() {
       const result = await reviewCollection.deleteMany({});
       res.send(result);
     });
-
+    // single-post-details api
     app.get("/single-post-details/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -352,6 +355,59 @@ async function run() {
       // console.log("/single-post-details/:id", query);
       const result = await userPostCollection.findOne(query);
       console.log(result);
+      res.send(result);
+    });
+    // // report info api
+    // report info API
+
+    // app.get("/reportsCount", async (req, res) => {
+    //   const { reported_to } = req.query;
+    //   const reportCount = await reportDonorCollection.countDocuments({
+    //     reported_to,
+    //   });
+    //   res.send({ count: reportCount });
+    // });
+    // Fetch reports made by the logged-in user
+    // Count the number of reports for a specific user (reported_to)
+    app.get("/reportDonor", async (req, res) => {
+      const result = await reportDonorCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/myReports", async (req, res) => {
+      const { reported_by } = req.query; // logged-in user's ID
+      const reports = await reportDonorCollection
+        .find({ reported_by })
+        .toArray();
+      res.send(reports);
+    });
+    // Create a route to check if the user has already reported the donor
+    app.get("/hasReported", async (req, res) => {
+      const { reported_by, reported_to } = req.query;
+      const existingReport = await reportDonorCollection.findOne({
+        reported_by,
+        reported_to,
+      });
+
+      if (existingReport) {
+        return res.status(200).send({ reported: true });
+      } else {
+        return res.status(200).send({ reported: false });
+      }
+    });
+
+    // Post a new report
+    app.post("/reportDonor", async (req, res) => {
+      const reportInfo = req.body;
+      const newPost = {
+        ...reportInfo,
+        reportDate: new Date(),
+      };
+      const result = await reportDonorCollection.insertOne(newPost);
+      res.send(result);
+    });
+
+    app.delete("/reportDonor", async (req, res) => {
+      const result = await reportDonorCollection.deleteMany({});
       res.send(result);
     });
 
