@@ -147,10 +147,11 @@ async function run() {
       const updatedStatus = req.body;
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
-      console.log("updatedStatus", updatedStatus);
+      console.log("updated users Status", updatedStatus);
       const updateProduct = {
         $set: {
-          user_activeStatus: updatedStatus.status,
+          user_activeStatus: updatedStatus.user_activeStatus,
+          account_status: updatedStatus.account_status,
         },
       };
       // console.log("updateProduct", updateProduct);
@@ -158,6 +159,7 @@ async function run() {
       console.log("result", result);
       res.send(result);
     });
+
     app.delete("/users", async (req, res) => {
       const result = await userCollection.deleteMany({});
       res.send(result);
@@ -203,7 +205,7 @@ async function run() {
       } = filter;
       console.log("filter from available donor", filter);
       // Construct query based on blood, religion, division, and active status
-      const query = { user_activeStatus: "active" }; // Ensure only active users are returned
+      const query = { user_activeStatus: "active", account_status: false }; // Ensure only active users are returned
       console.log("query", query);
       // if (blood && blood !== "All") {
       //     query.bloodGroup = { $regex: new RegExp(blood, "i") };
@@ -231,8 +233,6 @@ async function run() {
       }
     });
 
-    // app.put("/users/:id",(req,res)=>{
-    // })
 
     // create post api->>
     app.get("/allPosts", async (req, res) => {
@@ -336,7 +336,6 @@ async function run() {
       console.log("result", result);
       res.send(result);
     });
-
     app.delete("/reviews/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -357,18 +356,8 @@ async function run() {
       console.log(result);
       res.send(result);
     });
-    // // report info api
-    // report info API
 
-    // app.get("/reportsCount", async (req, res) => {
-    //   const { reported_to } = req.query;
-    //   const reportCount = await reportDonorCollection.countDocuments({
-    //     reported_to,
-    //   });
-    //   res.send({ count: reportCount });
-    // });
-    // Fetch reports made by the logged-in user
-    // Count the number of reports for a specific user (reported_to)
+    // report info API
     app.get("/reportDonor", async (req, res) => {
       const result = await reportDonorCollection.find().toArray();
       res.send(result);
@@ -395,7 +384,6 @@ async function run() {
       }
     });
 
-    // Post a new report
     app.post("/reportDonor", async (req, res) => {
       const reportInfo = req.body;
       const newPost = {
@@ -406,6 +394,27 @@ async function run() {
       res.send(result);
     });
 
+    app.patch("/reportDonor/:id", async (req, res) => {
+      const updatedStatus = req.body;
+      console.log(updatedStatus.status);
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      console.log("updatedStatus", updatedStatus);
+      const updateReport = {
+        $set: {
+          // report_status: updatedStatus.status,
+          report_status: true,
+        },
+      };
+      // console.log("updateReport", updateReport);
+      const result = await reportDonorCollection.updateOne(
+        filter,
+        updateReport
+      );
+      console.log("result", result);
+      res.send(result);
+    });
+    
     app.delete("/reportDonor", async (req, res) => {
       const result = await reportDonorCollection.deleteMany({});
       res.send(result);
