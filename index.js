@@ -80,14 +80,36 @@ async function run() {
       const filter = req.query;
       console.log(filter);
       // Extract search and category from query parameters
-      const { blood = "", religious = "", division = "" } = filter;
+      const {
+        search = "",
+        blood = "",
+        gender = "",
+        religious = "",
+        division = "",
+      } = filter;
       // Construct query based on blood and category
       const query = {};
+      // If a search query is provided, search in _id, phone, email, or user_name
+      if (search) {
+        query.$or = [
+          { _id: { $regex: new RegExp(search, "i") } },
+          { user_name: { $regex: new RegExp(search, "i") } },
+          { user_email: { $regex: new RegExp(search, "i") } },
+          { phone_number: { $regex: new RegExp(search, "i") } },
+        ];
+        // If the search term is a valid ObjectId, adjust the query
+        if (ObjectId.isValid(search)) {
+          query.$or.push({ _id: new ObjectId(search) });
+        }
+      }
       if (blood) {
         query.bloodGroup = { $regex: new RegExp(blood, "i") };
       }
       if (religious && religious !== "All") {
         query.user_religious = { $regex: new RegExp(religious, "i") };
+      }
+      if (gender && gender !== "All") {
+        query.user_gender = { $regex: new RegExp(gender, "i") };
       }
       if (division && division !== "All") {
         query.product_division = { $regex: new RegExp(division, "i") };
@@ -97,28 +119,39 @@ async function run() {
         const result = await userCollection.find(query).toArray();
         res.send(result);
       } catch (error) {
-        console.error("Error fetching products:", error);
+        console.error("Error fetching users:", error);
         res.status(500).send("Internal server error");
       }
     });
     app.post("/users", async (req, res) => {
-      const user = req.body;
-      // console.log("body", user);
-      const query = { email: user.user_email };
-      const existingUser = await userCollection.findOne(query);
-      if (existingUser) {
-        return res.send({ message: "user already exists on database" });
+      const { email, password } = req.body;
+
+      const user = await userCollection.findOne({ user_email: email });
+
+      if (!user) {
+        return res.status(400).send({ message: "User not found!" });
       }
-      const result = await userCollection.insertOne(user);
-      res.send(result);
+
+      if (user.account_status === true) {
+        return res.status(403).send({
+          message:
+            "This account has been suspended. For more information, please contact support.",
+        });
+      }
+      const isPasswordValid = password === user?.user_password;
+
+      if (!isPasswordValid) {
+        return res.status(401).send({ message: "Invalid email or password." });
+      }
+      res.status(200).send({ message: "Login successful", user });
     });
     app.put("/users/:id", async (req, res) => {
-      const userInfo = req.body;
+      const updatedInfo = req.body;
       const id = req.params.id;
       console.log("params", id);
       const query = { _id: new ObjectId(id) };
       const options = { upsert: true };
-      const updatedInfo = {
+      const updatedItems = {
         $set: {
           user_name: updatedInfo.user_name,
           user_age: updatedInfo.user_age,
@@ -139,8 +172,12 @@ async function run() {
       };
       console.log("updated info", updatedItems);
       // const result = await addedProductCollection.updateOne(filter, { $set: { ...updatedItems } }, options)
-      // const result = await addedProductCollection.updateOne(filter, updatedInfo, options)
-      // res.send(result);
+      const result = await userCollection.updateOne(
+        query,
+        updatedItems,
+        options
+      );
+      res.send(result);
     });
 
     app.patch("/users/:id", async (req, res) => {
@@ -202,6 +239,7 @@ async function run() {
         division = "",
         district = "",
         area = "",
+        gender = "",
       } = filter;
       console.log("filter from available donor", filter);
       // Construct query based on blood, religion, division, and active status
@@ -222,6 +260,9 @@ async function run() {
       if (area && area !== "All") {
         query.user_area = { $regex: new RegExp(area, "i") };
       }
+      if (gender && gender !== "All") {
+        query.user_gender = { $regex: new RegExp(gender, "i") };
+      }
 
       try {
         // Fetch users based on the constructed query
@@ -232,7 +273,6 @@ async function run() {
         res.status(500).send("Internal server error");
       }
     });
-
 
     // create post api->>
     app.get("/allPosts", async (req, res) => {
@@ -414,7 +454,7 @@ async function run() {
       console.log("result", result);
       res.send(result);
     });
-    
+
     app.delete("/reportDonor", async (req, res) => {
       const result = await reportDonorCollection.deleteMany({});
       res.send(result);
