@@ -78,12 +78,14 @@ async function run() {
     });
     app.get("/users", async (req, res) => {
       const filter = req.query;
-      console.log(filter);
+      console.log("filter from users", filter);
       // Extract search and category from query parameters
       const {
         search = "",
         blood = "",
         gender = "",
+        accountStatus = "",
+        availableStatus = "",
         religious = "",
         division = "",
       } = filter;
@@ -102,7 +104,7 @@ async function run() {
           query.$or.push({ _id: new ObjectId(search) });
         }
       }
-      if (blood) {
+      if (blood && blood !== "All") {
         query.bloodGroup = { $regex: new RegExp(blood, "i") };
       }
       if (religious && religious !== "All") {
@@ -110,6 +112,13 @@ async function run() {
       }
       if (gender && gender !== "All") {
         query.user_gender = { $regex: new RegExp(gender, "i") };
+      }
+      if (accountStatus && accountStatus !== "All") {
+        query.account_status = accountStatus === "activate" ? false : true;
+        // query.account_status = accountStatus;
+      }
+      if (availableStatus && availableStatus !== "All") {
+        query.user_activeStatus = availableStatus;
       }
       if (division && division !== "All") {
         query.product_division = { $regex: new RegExp(division, "i") };
@@ -244,7 +253,7 @@ async function run() {
       console.log("filter from available donor", filter);
       // Construct query based on blood, religion, division, and active status
       const query = { user_activeStatus: "active", account_status: false }; // Ensure only active users are returned
-      console.log("query", query);
+      // console.log("query", query);
       // if (blood && blood !== "All") {
       //     query.bloodGroup = { $regex: new RegExp(blood, "i") };
       // }
