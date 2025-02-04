@@ -133,9 +133,20 @@ async function run() {
       }
     });
     app.post("/users", async (req, res) => {
-      const { email, password } = req.body;
+      const userInfo = req.body;
+      const query = { user_email: userInfo.user_email };
+      console.log("userInfo", userInfo);
+      const existingUser = await userCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: "user already exists on database" });
+      }
+      const result = await userCollection.insertOne(userInfo);
+      res.send(result);
+    });
+    app.post("/login", async (req, res) => {
+      const { user_email, password } = req.body;
 
-      const user = await userCollection.findOne({ user_email: email });
+      const user = await userCollection.findOne({ user_email });
 
       if (!user) {
         return res.status(400).send({ message: "User not found!" });
@@ -147,13 +158,38 @@ async function run() {
             "This account has been suspended. For more information, please contact support.",
         });
       }
+
       const isPasswordValid = password === user?.user_password;
 
       if (!isPasswordValid) {
-        return res.status(401).send({ message: "Invalid email or password." });
+        return res.status(401).send({ message: "Invalid password." });
       }
+
       res.status(200).send({ message: "Login successful", user });
     });
+
+    // app.post("/users", async (req, res) => {
+    //   const { user_email, password } = req.body;
+
+    //   const user = await userCollection.findOne({ user_email: user_email });
+
+    //   if (!user) {
+    //     return res.status(400).send({ message: "User not found!" });
+    //   }
+
+    //   if (user.account_status === true) {
+    //     return res.status(403).send({
+    //       message:
+    //         "This account has been suspended. For more information, please contact support.",
+    //     });
+    //   }
+    //   const isPasswordValid = password === user?.user_password;
+
+    //   if (!isPasswordValid) {
+    //     return res.status(401).send({ message: "Invalid email or password." });
+    //   }
+    //   res.status(200).send({ message: "Login successful", user });
+    // });
     app.put("/users/:id", async (req, res) => {
       const updatedInfo = req.body;
       const id = req.params.id;
