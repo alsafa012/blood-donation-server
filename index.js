@@ -209,6 +209,7 @@ async function run() {
           user_activeStatus: updatedInfo.user_activeStatus,
           user_maritalStatus: updatedInfo.user_maritalStatus,
           user_religious: updatedInfo.user_religious,
+          user_gender: updatedInfo.user_gender,
           // user_password: updatedInfo.user_password,
           user_image: updatedInfo.user_image,
           user_nationality: updatedInfo.user_nationality,
@@ -234,6 +235,7 @@ async function run() {
         $set: {
           user_activeStatus: updatedStatus.user_activeStatus,
           account_status: updatedStatus.account_status,
+          showImage: updatedStatus.showImage,
         },
       };
       // console.log("updateProduct", updateProduct);
