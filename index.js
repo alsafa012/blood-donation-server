@@ -334,6 +334,27 @@ async function run() {
       const result = await userPostCollection.insertOne(newPost);
       res.send(result);
     });
+    // -------------need to modify--------
+    app.put("/allPosts/:id", async (req, res) => {
+      const updatedPostInfo = req.body;
+      const id = req.params.id;
+      // console.log("params", id);
+      const query = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedContent = {
+        $set: {
+          user_name: updatedPostInfo.user_name,
+        },
+      };
+      console.log("updated info", updatedContent);
+      const result = await userCollection.updateOne(
+        query,
+        updatedContent,
+        options
+      );
+      res.send(result);
+    });
+    // ---------------------
 
     app.patch("/allPosts/:id", async (req, res) => {
       const updatedStatus = req.body;
@@ -350,6 +371,48 @@ async function run() {
       const result = await userPostCollection.updateOne(filter, updateProduct);
       console.log("result", result);
       res.send(result);
+    });
+    app.delete("/allPosts/:id", async (req, res) => {
+      const postId = req.params.id;
+      const userId = req.body.userId; // Ensure this comes from the authenticated user
+      // console.log("postId", postId);
+      // console.log("userId", userId);
+
+      try {
+        // Find the post by postId
+        const post = await userPostCollection.findOne({
+          _id: new ObjectId(postId),
+        });
+
+        if (!post) {
+          return res.status(404).json({ error: "Post not found" });
+        }
+
+        // Check if the requesting user is the creator of the post
+        if (post.creator_id.toString() !== userId) {
+          return res
+            .status(403)
+            .json({ error: "Unauthorized: You can't delete this post" });
+        }
+        // Ensure userId is not undefined
+        if (!userId) {
+          return res.status(400).json({ error: "User ID is required" });
+        }
+
+        // If authorized, delete the post
+        const result = await userPostCollection.deleteOne({
+          _id: new ObjectId(postId),
+        });
+
+        if (result.deletedCount === 1) {
+          return res.status(200).json({ message: "Post deleted successfully" });
+        } else {
+          return res.status(500).json({ error: "Failed to delete post" });
+        }
+      } catch (error) {
+        console.error("Error deleting post:", error);
+        return res.status(500).json({ error: "Internal server error" });
+      }
     });
 
     // create allComments api->>
@@ -370,7 +433,6 @@ async function run() {
       const result = await userCommentCollection.deleteMany({});
       res.send(result);
     });
-    app;
 
     // allReviews api->>
 
