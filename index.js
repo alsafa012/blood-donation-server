@@ -326,34 +326,206 @@ async function run() {
       const result = await userPostCollection.find().toArray();
       res.send(result);
     });
+    app.get("/allPosts/:id", async (req, res) => {
+      const id = req.params.id;
+      // console.log("req.params 41", req.params);
+      const query = { _id: new ObjectId(id) };
+      result = await userPostCollection.findOne(query);
+      res.send(result);
+    });
     app.post("/allPosts", async (req, res) => {
       const postInfo = req.body;
-      console.log("postInfo", postInfo);
+      // console.log("postInfo", postInfo);
       const postCreatedDate = new Date(); // Save current date and time
       const newPost = { ...postInfo, postCreatedDate };
       const result = await userPostCollection.insertOne(newPost);
       res.send(result);
     });
     // -------------need to modify--------
+    // app.put("/allPosts/:id", async (req, res) => {
+    //   try {
+    //     const postId = req.params.id;
+    //     console.log("Updating Post with ID:", postId);
+    //     const updatedPostInfo = req.body;
+
+    //     const query = { _id: new ObjectId(postId) };
+    //     console.log("Updating Post query", query);
+
+    //     const userId = updatedPostInfo.userId; // userId is those user id who send request for update the post
+    //     // check that the requested user is authenticate or not
+    //     const checkAuthenticateUser = await userCollection.findOne({
+    //       _id: new ObjectId(String(userId)),
+    //     });
+    //     if (!checkAuthenticateUser) {
+    //       return res.status(404).json({ error: "User not found" });
+    //     }
+
+    //     // Find the post by postId
+    //     const post = await userPostCollection.findOne({
+    //       _id: new ObjectId(postId),
+    //     });
+    //     console.log("Find the post by postId:", post);
+
+    //     if (!post) {
+    //       return res.status(404).json({ error: "Post not found" });
+    //     }
+
+    //     // Check if the requesting user is the creator of the post
+    //     if (post.creator_id.toString() !== userId) {
+    //       return res
+    //         .status(403)
+    //         .json({ error: "Unauthorized: You can't delete this post" });
+    //     }
+    //     // Ensure userId is not undefined
+    //     if (!userId) {
+    //       return res.status(400).json({ error: "User ID is required" });
+    //     }
+    //     // If authorized, delete the post
+
+    //     const options = { upsert: true };
+    //     const updatedContent = {
+    //       $set: {
+    //         creator_id: updatedPostInfo.creator_id,
+    //         creator_name: updatedPostInfo.creator_name,
+    //         creator_email: updatedPostInfo.creator_email,
+    //         post_created_time: updatedPostInfo.post_created_time,
+    //         post_created_date: updatedPostInfo.post_created_date,
+    //         post_updated_time: updatedPostInfo.post_updated_time,
+    //         post_updated_date: updatedPostInfo.post_updated_date,
+    //         creator_image: updatedPostInfo.creator_image,
+    //         post_deadline: updatedPostInfo.post_deadline,
+    //         unit_of_blood: updatedPostInfo.unit_of_blood,
+    //         post_images: updatedPostInfo.post_images,
+    //         bloodGroup: updatedPostInfo.bloodGroup,
+    //         relation_with_patient: updatedPostInfo.relation_with_patient,
+    //         patient_name: updatedPostInfo.patient_name,
+    //         patient_age: updatedPostInfo.patient_age,
+    //         patient_gender: updatedPostInfo.patient_gender,
+    //         patient_region: updatedPostInfo.patient_region,
+    //         medical_reason: updatedPostInfo.medical_reason,
+    //         primary_number: updatedPostInfo.primary_number,
+    //         alternative_number: updatedPostInfo.alternative_number,
+    //         hospital_location: updatedPostInfo.hospital_location,
+    //         google_map_location: updatedPostInfo.google_map_location,
+    //         district_name: updatedPostInfo.district_name,
+    //         upazila_name: updatedPostInfo.upazila_name,
+    //         found_donor_successfully: updatedPostInfo.found_donor_successfully,
+    //       },
+    //     };
+    //     console.log("updated info", updatedContent);
+    //     // const result = await userPostCollection.updateOne(
+    //     //   query,
+    //     //   updatedContent,
+    //     //   options
+    //     // );
+
+    //     // if (result.modifiedCount > 0) {
+    //     //   return res.status(200).json({ message: "Post Updated successfully" });
+    //     // } else {
+    //     //   return res.status(500).json({ error: "Failed to update post" });
+    //     // }
+    //   } catch (error) {
+    //     console.error("Error updating post:", error);
+    //     return res.status(500).json({ error: "Internal Server Error" });
+    //   }
+    // });
+
     app.put("/allPosts/:id", async (req, res) => {
-      const updatedPostInfo = req.body;
-      const id = req.params.id;
-      // console.log("params", id);
-      const query = { _id: new ObjectId(id) };
-      const options = { upsert: true };
-      const updatedContent = {
-        $set: {
-          user_name: updatedPostInfo.user_name,
-        },
-      };
-      console.log("updated info", updatedContent);
-      const result = await userCollection.updateOne(
-        query,
-        updatedContent,
-        options
-      );
-      res.send(result);
+      try {
+        const postId = req.params.id;
+        const updatedPostInfo = req.body;
+        const filter = { _id: new ObjectId(postId) };
+        const userId = updatedPostInfo.userId; // User requesting update
+
+        console.log("Updating Post with ID:", postId);
+        // const userId = { _id: new ObjectId(String(updatedPostInfo.userId)) };
+        // console.log(userId);
+
+        // ✅ Check if postId and userId are valid MongoDB ObjectIds
+        if (!ObjectId.isValid(postId)) {
+          console.log("Invalid Post ID");
+          return res.status(400).json({ error: "Invalid Post ID" });
+        }
+        if (!ObjectId.isValid(userId)) {
+          console.log("Invalid User ID");
+          return res.status(400).json({ error: "Invalid User ID" });
+        }
+
+        // // ✅ Check if the user exists
+        const checkAuthenticateUser = await userCollection.findOne({
+          _id: new ObjectId(String(userId)),
+        });
+        console.log("checkAuthenticateUser", checkAuthenticateUser);
+        if (!checkAuthenticateUser) {
+          return res.status(404).json({ error: "User not found" });
+        }
+
+        // // ✅ Check if the post exists
+        const post = await userPostCollection.findOne({
+          _id: new ObjectId(postId),
+        });
+        console.log("Find the post by postId:", post);
+
+        if (!post) {
+          return res.status(404).json({ error: "Post not found" });
+        }
+
+        // // ✅ Ensure the user is the owner of the post
+        if (post.creator_id.toString() !== userId) {
+          console.log("Unauthorized: You can't update this post");
+          return res
+            .status(403)
+            .json({ error: "Unauthorized: You can't update this post" });
+        }
+
+        const options = { upsert: false };
+        const updatedContent = {
+          $set: {
+            creator_name: updatedPostInfo.creator_name,
+            creator_email: updatedPostInfo.creator_email,
+            post_updated_time: updatedPostInfo.post_updated_time,
+            post_updated_date: updatedPostInfo.post_updated_date,
+            post_deadline: updatedPostInfo.post_deadline,
+            unit_of_blood: updatedPostInfo.unit_of_blood,
+            bloodGroup: updatedPostInfo.bloodGroup,
+            relation_with_patient: updatedPostInfo.relation_with_patient,
+            patient_name: updatedPostInfo.patient_name,
+            patient_age: updatedPostInfo.patient_age,
+            patient_gender: updatedPostInfo.patient_gender,
+            patient_region: updatedPostInfo.patient_region,
+            medical_reason: updatedPostInfo.medical_reason,
+            primary_number: updatedPostInfo.primary_number,
+            alternative_number: updatedPostInfo.alternative_number,
+            hospital_location: updatedPostInfo.hospital_location,
+            google_map_location: updatedPostInfo.google_map_location,
+            district_name: updatedPostInfo.district_name,
+            upazila_name: updatedPostInfo.upazila_name,
+            found_donor_successfully: updatedPostInfo.found_donor_successfully,
+          },
+        };
+
+        console.log("Updated Info:", updatedContent);
+
+        // ✅ Update the post
+        const result = await userPostCollection.updateOne(
+          filter,
+          updatedContent,
+          options
+        );
+
+        if (result.modifiedCount > 0) {
+          return res.status(200).json({ message: "Post updated successfully" });
+        } else {
+          return res
+            .status(400)
+            .json({ error: "No changes detected or failed to update" });
+        }
+      } catch (error) {
+        console.error("Error updating post:", error);
+        return res.status(500).json({ error: "Internal Server Error" });
+      }
     });
+
     // ---------------------
 
     app.patch("/allPosts/:id", async (req, res) => {
@@ -374,10 +546,7 @@ async function run() {
     });
     app.delete("/allPosts/:id", async (req, res) => {
       const postId = req.params.id;
-      const userId = req.body.userId; // Ensure this comes from the authenticated user
-      // console.log("postId", postId);
-      // console.log("userId", userId);
-
+      const userId = req.body.userId;
       try {
         // Find the post by postId
         const post = await userPostCollection.findOne({
@@ -423,7 +592,7 @@ async function run() {
     });
     app.post("/allComments", async (req, res) => {
       const postInfo = req.body;
-      console.log("postInfo", postInfo);
+      // console.log("postInfo", postInfo);
       const postCreatedDate = new Date(); // Save current date and time
       const newPost = { ...postInfo, postCreatedDate };
       const result = await userCommentCollection.insertOne(newPost);
